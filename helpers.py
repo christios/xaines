@@ -12,7 +12,11 @@ pattern_word = r"<c>(.*?)</c>"
 pattern_first = r".*?<[0-9:.]+>"
 pattern_rest = r"<[0-9:.]+><c>\s.*?</c>"
 
-model = spacy.load("en_core_web_trf")
+try:
+    model = spacy.load("en_core_web_trf")
+except:
+    model = None
+    print('The TRF Spacy model is not available. Either download it using:\n\n\tpython -m spacy download en_core_web_trf\n\nor do not use any function which might need it.')
 
 class Word:
     def __init__(self,

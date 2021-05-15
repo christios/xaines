@@ -4,9 +4,7 @@ import pickle
 import os
 import csv
 
-import spacy
-
-model = spacy.load("en_core_web_trf")
+from helpers import model
 
 BODY_PARTS = ['arm', 'eye', 'eyebrow', 'belly', 'leg', 'breast', 'thumb', 'elbow',
               'finger', 'foot', 'ankle', 'buttocks', 'hair', 'neck',

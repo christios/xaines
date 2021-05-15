@@ -8,9 +8,6 @@ from typing import TextIO, Dict, Generator, Tuple
 from helpers import Video, Caption, Word
 from utils import *
 
-import spacy
-
-model = spacy.load("en_core_web_trf")
 
 BODY_PARTS = ['arm', 'eye', 'eyebrow', 'belly', 'leg', 'breast', 'thumb', 'elbow',
               'finger', 'foot', 'ankle', 'buttocks', 'hair', 'neck', 'face',
