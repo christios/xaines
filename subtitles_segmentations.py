@@ -100,7 +100,7 @@ class SubtitleReader:
 
     @staticmethod
     def load(path: TextIO) -> SubtitleReader:
-        print('Loading the videos...')
+        print('\nLoading the videos...')
         with open(path, 'rb') as f:
             videos = pickle.load(f)
         print('Done loading.')
@@ -210,7 +210,9 @@ class SubtitleReader:
                         contexts[-1].append(
                             ' '.join([w.text for w in video.words[max(0, i - x): i + x]]))
             head, tail = os.path.split(video.file_path)
-            with open(os.path.join(head, 'bp-' + tail), 'w') as f:
+            if not os.path.isdir(os.path.join(head, 'bp')):
+                os.mkdir(os.path.join(head, 'bp'))
+            with open(os.path.join(head, 'bp', tail.split('.')[0]), 'w') as f:
                 for x in range(3, 6):
                     print(f'context-{x}', file=f, end='\t')
                 print(file=f)
@@ -222,7 +224,7 @@ class SubtitleReader:
 def main():
     # vtt_folder = '/hd2/data/cennet/impress/data/raw/YouCookII/youcook_vtt'
     vtt_folder = '/hd2/xaines/videos/subtitles/video_ids'
-    save_path = 'videos_with_features.pickle'
+    save_path = '/home/cayralat/xaines/videos_with_features.pickle'
     videos = SubtitleReader.load(save_path)
     # videos = SubtitleReader(vtt_folder, save_path)
 
@@ -232,8 +234,10 @@ def main():
     # write_to_csv(analysis)
     # videos.get_subtree('pos', 'VERB')
     # body_parts, proportion = videos.body_parts_counts()
-    videos.get_body_parts_and_contexts()
-    pass
+    # videos.get_body_parts_and_contexts()
+
+    for video_id, video in videos:
+        contexts = video.get_contexts()
     
 
     
