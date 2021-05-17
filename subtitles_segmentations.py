@@ -236,7 +236,7 @@ def main():
     # body_parts, proportion = videos.body_parts_counts()
     # videos.get_body_parts_and_contexts()
 
-    for video_id, video in videos:
+    for video in videos.id_to_vid.values():
         contexts = video.get_contexts()
     
 
