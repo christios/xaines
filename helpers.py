@@ -128,19 +128,6 @@ class Video:
     def sentences(self):
         return list(self.analysis.sents)
 
-    def get_contexts(self):
-        head, tail = os.path.split(self.file_path)
-        contexts = {}
-        with open(os.path.join(head, 'bp', tail.split('.')[0])) as f:
-            for i, line in enumerate(f):
-                if i == 0:
-                    for c in line.strip().split('\t'):
-                        contexts[c] = []
-                else:
-                    for j, c in enumerate(line.strip().split('\t')):
-                        contexts['context-' + str(j + 3)].append(c)
-        return contexts
-
 
     @staticmethod
     def visualize_dependency_tree(sentence) -> None:
