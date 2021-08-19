@@ -6,7 +6,9 @@ import os
 from typing import TextIO, Dict, Generator, Tuple
 
 from helpers import Video, Caption, Word, model
-from utils import *
+import utils
+
+SubtitleReaderNested = Dict[str, Dict[str, Video]]
 
 class SubtitleReader:
     def __init__(self,
@@ -29,7 +31,7 @@ class SubtitleReader:
         if save_path:
             self.save(save_path)
 
-    def read_videos(self, vtt_folder: TextIO) -> Tuple[Dict, Dict[str, Video]]:
+    def read_videos(self, vtt_folder: TextIO) -> Tuple[Dict[str, SubtitleReaderNested], Dict[str, Video]]:
         """This method reads the subtitle files and stores them in a nested dictionaries
         the hierarchy of which is the same as the subfolders hierarchy.
 
@@ -54,7 +56,7 @@ class SubtitleReader:
             set_leaf(tree[branches[0]], branches[1:], leaf, bar)
 
         startpath = vtt_folder
-        tree: Dict = {}
+        tree: SubtitleReaderNested = {}
         id_to_vid: Dict[str, Video] = {}
         bar = tqdm(total=sum(len(x[2]) for x in list(os.walk(startpath))))
         for root, dirs, files in os.walk(startpath):
@@ -169,18 +171,19 @@ def main():
     # Below are a bunch of functions loaded from utils.py which use the SubtitleReader
     # class to infer some statistics from the dataset.
 
-    # counters_videos = analyze_pos_dep(videos)
-    # counter_eng_sample = analyze_pos_dep_english_sample()
-    # analysis = get_proportions_of_features(counters_videos, counter_eng_sample)
-    # write_to_csv(analysis)
-    # get_subtree(videos, feature='pos', value='VERB')
-    # body_parts, proportion = body_parts_counts(videos)
-    # get_body_parts_and_contexts(videos)
+    # counters_videos = utils.analyze_pos_dep(videos)
+    # counter_eng_sample = utils.analyze_pos_dep_english_sample()
+    # analysis = utils.get_proportions_of_features(counters_videos, counter_eng_sample)
+    # utils.write_to_csv(analysis)
+    # utils.get_subtree(videos, feature='pos', value='VERB')
+    # utils.body_parts, proportion = body_parts_counts(videos)
+    # utils.get_body_parts_and_contexts(videos)
 
     # for video in videos.id_to_vid.values():
-    #     contexts = get_contexts(video)
+    #     contexts = utils.get_contexts(video)
+    # utils.analyze_verb_distribution(videos)
 
-    analyze_verb_distribution(videos)
+    utils.verb_contexts_distribution(videos)
     pass
     
 

@@ -7,7 +7,8 @@ from typing import Tuple
 
 import numpy as np
 
-from helpers import model
+from helpers import Video, Caption, Word, model
+import subtitles_segmentations as ss
 
 BODY_PARTS = ['arm', 'eye', 'eyebrow', 'belly', 'leg', 'breast', 'thumb', 'elbow',
               'finger', 'foot', 'ankle', 'buttocks', 'hair', 'neck', 'face',
@@ -122,6 +123,34 @@ def analyze_verb_distribution(videos,
         verb_distribution_per_category(counters)
 
     return counters
+
+
+def verb_contexts_distribution(videos: ss.SubtitleReader,
+                               window=2):
+    with tqdm(total=len(videos.id_to_vid)) as progress_bar:
+        verb_contexts = {}
+        for category, content in videos.videos.items():
+            for subcategory, sub_content in content.items():
+                for video in sub_content.values():
+                    words = video.words
+                    for i, word in enumerate(words):
+                        if word.pos and 'VERB' in word.pos:
+                            start = max(0, i - window)
+                            stop = i + window + 1
+                            context = tuple([(w.pos, w.text) for w in words[start:stop]])
+                            verb_contexts.setdefault(subcategory, []).append(context)
+                    progress_bar.update(1)
+    verb_contexts_dist = {}
+    for category, contexts in verb_contexts.items():
+        value = verb_contexts_dist.setdefault(category, {'pos': Counter()})
+        value['pos'].update([tuple([c[0] for c in ctx]) for ctx in contexts])
+        value['pos'] = value['pos'].most_common()
+        value['examples'] = {}
+        for ctx in contexts:
+            value['examples'].setdefault(tuple([c[0] for c in ctx]), []).append(
+                tuple([c[1] for c in ctx]))
+        value['examples'] = {ctx: value['examples'][ctx] for ctx, _ in value['pos']}
+    return verb_contexts_dist
 
 
 def tf_idf(verb_counters):
