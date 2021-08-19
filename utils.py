@@ -8,7 +8,6 @@ from typing import Tuple
 import numpy as np
 
 from helpers import model
-import lsa
 
 BODY_PARTS = ['arm', 'eye', 'eyebrow', 'belly', 'leg', 'breast', 'thumb', 'elbow',
               'finger', 'foot', 'ankle', 'buttocks', 'hair', 'neck', 'face',
@@ -98,7 +97,7 @@ def body_parts_counts(videos) -> Tuple[Counter, float]:
 
 
 def analyze_verb_distribution(videos,
-                              analysis='lsa',
+                              analysis='tf_idf',
                               verb_counters_path='/home/cayralat/xaines/verb_counters.pickle'):
     if os.path.exists(verb_counters_path):
         with open(verb_counters_path, 'rb') as f:
@@ -116,12 +115,50 @@ def analyze_verb_distribution(videos,
         with open(verb_counters_path, 'wb') as f:
             pickle.dump(counters, f)
 
-    if analysis == 'lsa':
-        lsa.tf_idf(counters)
+    if analysis == 'tf_idf':
+        tf_idf_matrix = tf_idf(counters)
+
     elif analysis == 'distribution':
         verb_distribution_per_category(counters)
 
     return counters
+
+
+def tf_idf(verb_counters):
+    num_of_categories = sum(len(content) for content in verb_counters.values())
+    verbs_fl = Counter([term[0] for content in verb_counters.values()
+                       for subcontent in content.values() for term in subcontent])
+    id2cat = [subcategory for content in verb_counters.values()
+              for subcategory in content]
+    cat2id = {cat: i for i, cat in enumerate(id2cat)}
+    id2term = [term for term in verbs_fl]
+    term2id = {term: i for i, term in enumerate(id2term)}
+    df = np.zeros((num_of_categories, len(verbs_fl)), dtype=np.uint8)
+    for category in verb_counters.values():
+        for name, doc in category.items():
+            for term in doc:
+                x, y = cat2id[name], term2id[term[0]]
+                df[x][y] = 1
+    tf_idf_matrix = np.zeros((num_of_categories, len(verbs_fl)))
+    for category in verb_counters.values():
+        for name, doc in category.items():
+            doc_total_verb_count = sum(term[1] for term in doc)
+            for term in doc:
+                x, y = cat2id[name], term2id[term[0]]
+                # tf
+                tf_idf_matrix[x][y] = term[1] / doc_total_verb_count
+                # idf
+                tf_idf_matrix[x][y] *= np.log10(len(id2cat) /
+                                                min(df[:, y].sum(), len(id2cat) - 1))
+    most_important_words = {}
+    for i, category_counts in enumerate(tf_idf_matrix):
+        for j, index in enumerate(np.flip(category_counts.argsort())):
+            if j == 30:
+                break
+            most_important_words.setdefault(id2cat[i], []).append(id2term[index])
+
+                 
+    return tf_idf_matrix
 
 def verb_distribution_per_category(counters):
     distribution = {}

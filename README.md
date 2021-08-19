@@ -48,3 +48,15 @@ You can also loop through the videos with their associated categories:
         for subcat_name, subcategory in category.items():
             for video_id, video in subcategory.items():
                 pass
+
+### Video Object
+
+There are multiple ways to interact with the `video` object:
+
+    video_words = video.words # List of all `Word` objects in the video
+    captions = video.captions # List of all `Caption` objects in the video
+    caption_words = captions[0].words # List of all `Word` objects in the first caption of the video
+    caption_word = caption_words[0] # Gets first `Word` object in the first caption
+    video_analysis = video.analysis # Runs a spaCy analysis on the video and returns it
+    video_sentences = video.sentences # Runs a spaCy analysis on the video and segments the words into sentences
+
