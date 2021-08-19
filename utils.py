@@ -5,17 +5,23 @@ import os
 import csv
 from typing import Tuple
 
+import numpy as np
+
 from helpers import model
+import lsa
 
 BODY_PARTS = ['arm', 'eye', 'eyebrow', 'belly', 'leg', 'breast', 'thumb', 'elbow',
-              'finger', 'foot', 'ankle', 'buttocks', 'hair', 'neck',
+              'finger', 'foot', 'ankle', 'buttocks', 'hair', 'neck', 'face',
               'hand', 'wrist', 'hip', 'chin', 'knee', 'head', 'lip', 'mouth', 'nose',
               'nostril', 'thigh', 'ear', 'bottom', 'bum', 'back', 'underarm', 'forearm',
               'leg', 'shoulder', 'forehead', 'waist', 'calf', 'cheek',
-              'eyelash', 'lash', 'tooth', 'toe', 'tongue']
+              'eyelash', 'lash', 'tooth', 'toe', 'tongue', 'muscle', 'lung', 'spine', 'stomach',
+              'chest', 'abdominal', 'ab', 'hamstring', 'quadricep', 'quad', 'glute', 'bicep',
+              'tricep', 'forearm', 'trap']
 BODY_PARTS_PLURAL = ['feet', 'calves', 'teeth'] + \
     [bp + 's' for bp in BODY_PARTS]
 BODY_PARTS += BODY_PARTS_PLURAL
+BODY_PARTS = {bp: None for bp in BODY_PARTS}
 
 def analyze_pos_dep_english_sample(counters_path='/Users/chriscay/Library/Mobile Documents/com~apple~CloudDocs/Saarland Univeristy/Winter 2020-2021/hiwi/youtube_videos/counters_eng_sample.pickle',
                                    reset=False):
@@ -91,6 +97,49 @@ def body_parts_counts(videos) -> Tuple[Counter, float]:
     return body_parts, proportion
 
 
+def analyze_verb_distribution(videos,
+                              analysis='lsa',
+                              verb_counters_path='/home/cayralat/xaines/verb_counters.pickle'):
+    if os.path.exists(verb_counters_path):
+        with open(verb_counters_path, 'rb') as f:
+            counters = pickle.load(f)
+    else:
+        counters = {}
+        for category, content in videos.videos.items():
+            counters[category] = dict()
+            for subcategory, sub_content in content.items():
+                counters[category][subcategory] = Counter()
+                for video_id, video in sub_content.items():
+                    counters[category][subcategory].update(
+                        [word.text for word in video if word.pos == 'VERB'])
+                counters[category][subcategory] = counters[category][subcategory].most_common()
+        with open(verb_counters_path, 'wb') as f:
+            pickle.dump(counters, f)
+
+    if analysis == 'lsa':
+        lsa.tf_idf(counters)
+    elif analysis == 'distribution':
+        verb_distribution_per_category(counters)
+
+    return counters
+
+def verb_distribution_per_category(counters):
+    distribution = {}
+    for name, category in counters.items():
+        distribution.setdefault(name, [])
+        c = 0
+        for subcategory in category.values():
+            for verb in subcategory:
+                if c > 30:
+                    continue
+                distribution[name].append(verb)
+                c += 1
+    for cat in distribution:
+        with open(f'/home/cayralat/xaines/{cat}_counts.tsv', 'w') as f:
+            for x in distribution[cat]:
+                print(*x, file=f, sep='\t')
+
+
 def get_body_parts_and_contexts(videos):
     for video in tqdm(videos.id_to_vid.values()):
         contexts = []
@@ -122,7 +171,7 @@ def analyze_pos_dep(videos,
         'spots': {'dep': Counter(), 'pos': Counter(), 'dep_pos': Counter()}
     }
     if reset or not os.path.exists(counters_path):
-        for category, content in videos.items():
+        for category, content in videos.videos.items():
             print(category)
             sub_cat_samples = 30 // len(content)
             for subcategory, sub_content in content.items():

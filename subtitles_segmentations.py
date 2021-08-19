@@ -5,27 +5,23 @@ import pickle
 import os
 from typing import TextIO, Dict, Generator, Tuple
 
-from helpers import Video, Caption, Word
+from helpers import Video, Caption, Word, model
 from utils import *
-
-
-BODY_PARTS = ['arm', 'eye', 'eyebrow', 'belly', 'leg', 'breast', 'thumb', 'elbow',
-              'finger', 'foot', 'ankle', 'buttocks', 'hair', 'neck', 'face',
-              'hand', 'wrist', 'hip', 'chin', 'knee', 'head', 'lip', 'mouth', 'nose',
-              'nostril', 'thigh', 'ear', 'bottom', 'bum', 'back', 'underarm', 'forearm',
-              'leg', 'shoulder', 'forehead', 'waist', 'calf', 'cheek',
-              'eyelash', 'lash', 'tooth', 'toe', 'tongue', 'muscle', 'lung', 'spine', 'stomach',
-              'chest', 'abdominal', 'ab', 'hamstring', 'quadricep', 'quad', 'glute', 'bicep',
-              'tricep', 'forearm', 'trap']
-BODY_PARTS_PLURAL = ['feet', 'calves', 'teeth'] + [bp + 's' for bp in BODY_PARTS]
-BODY_PARTS += BODY_PARTS_PLURAL
-BODY_PARTS = {bp: None for bp in BODY_PARTS}
-
 
 class SubtitleReader:
     def __init__(self,
                  vtt_folder: TextIO,
                  save_path: TextIO = '') -> None:
+        """This class parses vtt subtitle files and stores them in an organized dictionary
+        the hierarchy of which is the same as the directory hierarchy in which the subtitle
+        files are stored. It returns a `SubtitlesReader` object which contains the parsed subtitles
+        in a structured way, and with syntactic dependencies and POS for each word.
+
+        Args:
+            vtt_folder (TextIO): Path of the directory in which the subfolders are stored.
+            save_path (TextIO, optional): Path of the pickle file to which we should save the
+            subtitles object. Defaults to ''.
+        """
         self.vtt_folder = vtt_folder
         self.videos, self.id_to_vid = self.read_videos(vtt_folder)
         self.videos.assign_features(save_path)
@@ -33,8 +29,19 @@ class SubtitleReader:
         if save_path:
             self.save(save_path)
 
+    def read_videos(self, vtt_folder: TextIO) -> Tuple[Dict, Dict[str, Video]]:
+        """This method reads the subtitle files and stores them in a nested dictionaries
+        the hierarchy of which is the same as the subfolders hierarchy.
 
-    def read_videos(self, vtt_folder: TextIO):
+        Args:
+            vtt_folder (TextIO): Path of the directory in which the subfolders are stored.
+
+        Returns:
+            Tuple[Dict, Dict]: The first dictionary contains nested dictionaries based on the
+            structure of the subfolders. The second dictionary is a simple mapping between the
+            videos and their IDs (there are no nested dictionaries).
+        """
+
         def set_leaf(tree, branches, leaf, bar):
             """Example:
             set_leaf(t, ['b1','b2','b3'], 'new_leaf') # {'b1': {'b2': {'b3': 'new_leaf'}}}
@@ -66,7 +73,16 @@ class SubtitleReader:
         return tree[vtt_folder], id_to_vid
 
     def assign_features(self,
-                        save_path: TextIO = 'videos_with_features.pickle'):
+                        save_path: TextIO = 'videos_with_features.pickle') -> None:
+        """This method runs the `spaCy` pipeline on each subtitle file which includes
+        syntactic relations (`dep_` and `head`) and POS tagging (`pos_`). We only store
+        the mentioned features because storing the whole analysis for each file would
+        require a lot of memory.
+
+        Args:
+            save_path (TextIO, optional): Path of the `pickle` file to which we should save the
+            subtitles object. Defaults to 'videos_with_features.pickle'.
+        """
         for video in tqdm(self.id_to_vid.values()):
             analysis = video.analysis
             analysis_text = analysis.text
@@ -82,7 +98,7 @@ class SubtitleReader:
                     i += 1
                 else:
                     # To create a one-to-one mapping between Spacy tokens and caption words
-                    # because Spacy splits tokens
+                    # because Spacy splits tokens (e.g., don't -> do + n't)
                     mid_word = True
                     words[i - 1].pos += ('+' + token.pos_)
                     words[i - 1].dep += ('+' + token.dep_)
@@ -100,17 +116,31 @@ class SubtitleReader:
 
     @staticmethod
     def load(path: TextIO) -> SubtitleReader:
+        """This method should be used if we have already parsed the subtitles and have
+        stored them in a `pickle` file from which we want to load them.
+
+        Args:
+            path (TextIO): Path of the `pickle` file from which we should load the
+            subtitles object.
+
+        Returns:
+            SubtitleReader: Subtitles object which contains the parsed subtitles in a structured
+            way, and with syntactic dependencies and POS for each word.
+        """
         print('\nLoading the videos...')
         with open(path, 'rb') as f:
-            videos = pickle.load(f)
+            videos: SubtitleReader = pickle.load(f)
         print('Done loading.')
         return videos
 
     def save(self, path: TextIO) -> None:
+        """Save the `SubtitlesReader` object to a `pickle` file."""
         with open(path, 'wb') as f:
             pickle.dump(self, f)
 
     def __getitem__(self, video_id: str) -> Video:
+        """With the slice notation, we search the `SubtitlesReader` object by video id
+        (and not by video category)."""
         return self.id_to_vid[video_id]
 
     def __len__(self) -> int:
@@ -124,6 +154,8 @@ class SubtitleReader:
                 yield k, v
 
     def __iter__(self) -> Generator[Tuple[str, Video]]:
+        """When the `SubtitlesReader` object is used as an iterator, the elements returned
+        are a key/value tuple which are the video category (key) and the `Video` object."""
         return self.nested_iter(self.videos)
 
 
@@ -134,6 +166,9 @@ def main():
     videos = SubtitleReader.load(save_path)
     # videos = SubtitleReader(vtt_folder, save_path)
 
+    # Below are a bunch of functions loaded from utils.py which use the SubtitleReader
+    # class to infer some statistics from the dataset.
+
     # counters_videos = analyze_pos_dep(videos)
     # counter_eng_sample = analyze_pos_dep_english_sample()
     # analysis = get_proportions_of_features(counters_videos, counter_eng_sample)
@@ -142,8 +177,11 @@ def main():
     # body_parts, proportion = body_parts_counts(videos)
     # get_body_parts_and_contexts(videos)
 
-    for video in videos.id_to_vid.values():
-        contexts = get_contexts(video)
+    # for video in videos.id_to_vid.values():
+    #     contexts = get_contexts(video)
+
+    analyze_verb_distribution(videos)
+    pass
     
 
     

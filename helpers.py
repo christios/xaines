@@ -45,6 +45,17 @@ class Caption:
                  is_word_aligned: bool,
                  start: Optional[float] = None,
                  end: Optional[float] = None) -> None:
+        """A `Caption` object encapsulates words which belong to the same span in a 
+        vtt file, i.e., they appear on the same screen.
+
+        Args:
+            is_word_aligned (bool): Some vtt files provide time stamps for each word,
+            while others only contain time stamps for the beginning and end of a caption. This
+            should be `True` if the former is true.
+            start (Optional[float], optional): Time stamp of the beginning of the caption. Defaults to None.
+            end (Optional[float], optional): Time stamp of the end of the caption. Defaults to None.
+        """
+
         self.words: List[Word] = []
         self.is_word_aligned = is_word_aligned
         self.start = start
@@ -76,9 +87,9 @@ class Video:
         self.file_name = os.path.basename(
             self.file_path.replace('.en.vtt', ''))
         self.captions = Video._parse_vtt_file(file_path)
-        self.preprocess()
+        self._preprocess()
 
-    def preprocess(self):
+    def _preprocess(self):
         for caption in self.captions:
             words_ = []
             for word in caption:
@@ -122,6 +133,9 @@ class Video:
 
     @property
     def analysis(self):
+        """Use the available spaCy model to analyze a video (sentence segmentation,
+        syntaxtic relations, POS tagging).
+        """
         return model(str(self))
 
     @property
