@@ -127,6 +127,22 @@ def analyze_verb_distribution(videos,
 
 def verb_contexts_distribution(videos: ss.SubtitleReader,
                                window=2):
+    """This method analyzes the context of each verb in all of the subtitle files,
+    by using POS as a feature. The assumption is that some contexts might be more
+    indicative than others of whether the verb if an "action" verb or not (in our
+    definition of "action").
+
+    Args:
+        videos (ss.SubtitleReader): Object containing all the subtitles
+        window (int, optional): Size of each side of the context window, the center
+        of which is the verb in question. Defaults to 2.
+
+    Returns:
+        verb_contexts_dist: dictionary containing the frequencies of the context types
+        according to the category of videos (e.g., fight, dance, etc.)
+        verb_contexts_global_examples: dictionary containing the context types from most
+        to least frequent, with examples for each.
+    """
     with tqdm(total=len(videos.id_to_vid)) as progress_bar:
         verb_contexts = {}
         for category, content in videos.videos.items():
@@ -144,13 +160,24 @@ def verb_contexts_distribution(videos: ss.SubtitleReader,
     for category, contexts in verb_contexts.items():
         value = verb_contexts_dist.setdefault(category, {'pos': Counter()})
         value['pos'].update([tuple([c[0] for c in ctx]) for ctx in contexts])
-        value['pos'] = value['pos'].most_common()
+        value['pos'] = value['pos']
         value['examples'] = {}
         for ctx in contexts:
             value['examples'].setdefault(tuple([c[0] for c in ctx]), []).append(
                 tuple([c[1] for c in ctx]))
-        value['examples'] = {ctx: value['examples'][ctx] for ctx, _ in value['pos']}
-    return verb_contexts_dist
+        value['examples'] = {ctx: value['examples'][ctx] for ctx in value['pos']}
+    verb_contexts_global_counts = Counter()
+    verb_contexts_global_examples = {}
+    for cat in verb_contexts_dist.values():
+        verb_contexts_global_counts += cat['pos']
+        for k, v in cat['examples'].items():
+            examples = verb_contexts_global_examples.setdefault(k, [])
+            examples += v
+    verb_contexts_global_counts = verb_contexts_global_counts.most_common()
+    verb_contexts_global_examples = {
+        ctx: verb_contexts_global_examples[ctx] for ctx, _ in verb_contexts_global_counts}
+    verb_contexts_dist = {k: v['pos'].most_common() for k, v in verb_contexts_dist.items()}
+    return verb_contexts_dist, verb_contexts_global_examples
 
 
 def tf_idf(verb_counters):

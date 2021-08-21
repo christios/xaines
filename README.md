@@ -4,6 +4,10 @@ This repository contains a script which allows you to read subtitles from *vtt* 
 
 ## Instantiation
 
+The main python file is `subtitles_segmentations.py`. To parse and analyze the data, run:
+
+    python3 subtitles_segmentations.py
+
 The class which allows you to parse subtitles is `SubtitleReader`. The first way of instantiating an object is to call the constructor of the class, in which case the subtitle files in the provided path will be parsed. This takes quite some time (around 10 minutes):
     
     videos = SubtitleReader(vtt_folder, save_path)
